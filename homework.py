@@ -1,5 +1,3 @@
-"""Telegram bot for checking Yandex Practicum homework status."""
-
 import logging
 import os
 import sys
