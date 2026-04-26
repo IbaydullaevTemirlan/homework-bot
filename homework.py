@@ -1,4 +1,4 @@
-"""Бот Telegram для проверки статуса домашней работы в Практикуме."""
+"""Бот Telegram: проверка статуса домашней работы в Практикуме."""
 
 import logging
 import os
@@ -22,9 +22,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-HEADERS = {
-    'Authorization': f'OAuth {PRACTICUM_TOKEN}',
-}
+HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
@@ -41,19 +39,17 @@ def check_tokens():
         'TELEGRAM_CHAT_ID',
     )
     missing = [name for name in required if not globals().get(name)]
-
     if missing:
-        missing_str = ', '.join(missing)
         logging.critical(
             'Отсутствуют обязательные переменные окружения: %s',
-            missing_str,
+            ', '.join(missing),
         )
         return False
     return True
 
 
 def send_message(bot, message):
-    """Отправить сообщение в Telegram. Возвращает True/False."""
+    """Отправить сообщение в Telegram (True/False)."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug('Бот отправил сообщение "%s"', message)
@@ -61,13 +57,13 @@ def send_message(bot, message):
     except (ApiException, requests.RequestException) as error:
         logging.error(
             'Сбой при отправке сообщения в Telegram: %s',
-                      error
-                      )
+            error,
+        )
         return False
 
 
 def get_api_answer(timestamp):
-    """Сделать запрос к API Практикума и вернуть JSON."""
+    """Запросить API Практикума и вернуть JSON."""
     params = {'from_date': timestamp}
     try:
         response = requests.get(
@@ -77,10 +73,13 @@ def get_api_answer(timestamp):
             timeout=10,
         )
     except requests.RequestException as error:
-        raise ConnectionError(
-            f'Ошибка запроса к API. Эндпоинт: {ENDPOINT}, params: {params}. '
+        error_message = (
+            'Ошибка запроса к API. '
+            f'Эндпоинт: {ENDPOINT}. '
+            f'Параметры: {params}. '
             f'Ошибка: {error}'
-        ) from error
+        )
+        raise ConnectionError(error_message) from error
 
     if response.status_code != HTTPStatus.OK:
         raise ApiRequestError(
@@ -92,10 +91,10 @@ def get_api_answer(timestamp):
 
 
 def check_response(response):
-    """Проверить формат ответа API и вернуть список homeworks."""
+    """Проверить структуру ответа API."""
     if not isinstance(response, dict):
         raise TypeError(
-            'Ответ API должен быть словарём (dict). '
+            'Ответ API должен быть dict. '
             f'Получен тип: {type(response)}'
         )
 
@@ -105,20 +104,17 @@ def check_response(response):
     homeworks = response['homeworks']
     if not isinstance(homeworks, list):
         raise TypeError(
-            'Значение ключа "homeworks" должно быть списком. '
+            'Значение ключа "homeworks" должно быть list. '
             f'Получен тип: {type(homeworks)}'
         )
-
     return homeworks
 
 
 def parse_status(homework):
-    """Сформировать сообщение по статусу домашней работы."""
-    logging.debug('Начинаю проверку статуса домашней работы.')
-
+    """Собрать сообщение о статусе."""
     if not isinstance(homework, dict):
         raise TypeError(
-            'Элемент списка homeworks должен быть словарём. '
+            'Элемент "homeworks" должен быть dict. '
             f'Получен тип: {type(homework)}'
         )
 
@@ -131,13 +127,9 @@ def parse_status(homework):
     status = homework['status']
 
     if status not in HOMEWORK_VERDICTS:
-        raise HomeworkStatusError(
-            f'Неожиданный статус домашней работы: {status}'
-        )
+        raise HomeworkStatusError(f'Неожиданный статус: {status}')
 
     verdict = HOMEWORK_VERDICTS[status]
-    logging.debug('Статус домашней работы успешно обработан.')
-
     return (
         f'Изменился статус проверки работы "{homework_name}". '
         f'{verdict}'
@@ -145,7 +137,7 @@ def parse_status(homework):
 
 
 def main():
-    """Запустить основной цикл бота."""
+    """Запустить основной цикл."""
     if not check_tokens():
         sys.exit(1)
 
