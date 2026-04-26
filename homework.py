@@ -49,17 +49,12 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    """Отправить сообщение в Telegram (True/False)."""
+    """Отправить сообщение в Telegram."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug('Бот отправил сообщение "%s"', message)
-        return True
     except (ApiException, requests.RequestException) as error:
-        logging.error(
-            'Сбой при отправке сообщения в Telegram: %s',
-            error,
-        )
-        return False
+        logging.error('Сбой при отправке сообщения в Telegram: %s', error)
 
 
 def get_api_answer(timestamp):
@@ -73,13 +68,12 @@ def get_api_answer(timestamp):
             timeout=10,
         )
     except requests.RequestException as error:
-        error_message = (
+        raise ConnectionError(
             'Ошибка запроса к API. '
             f'Эндпоинт: {ENDPOINT}. '
             f'Параметры: {params}. '
             f'Ошибка: {error}'
-        )
-        raise ConnectionError(error_message) from error
+        ) from error
 
     if response.status_code != HTTPStatus.OK:
         raise ApiRequestError(
@@ -152,11 +146,10 @@ def main():
 
             if not homeworks:
                 logging.debug('Отсутствие в ответе новых статусов.')
-                last_error_message = ''
             else:
                 message = parse_status(homeworks[0])
-                if send_message(bot, message):
-                    last_error_message = ''
+                send_message(bot, message)
+                last_error_message = ''
 
             timestamp = response.get('current_date', int(time.time()))
 
@@ -165,8 +158,8 @@ def main():
             logging.error(message)
 
             if message != last_error_message:
-                if send_message(bot, message):
-                    last_error_message = message
+                send_message(bot, message)
+                last_error_message = message
 
         finally:
             time.sleep(RETRY_PERIOD)
